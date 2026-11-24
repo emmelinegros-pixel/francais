@@ -130,7 +130,8 @@ b.hl{font-weight:700;color:var(--navy);border-bottom:2px dotted var(--blue);curs
 .parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(9em,1fr));gap:10px}
 .parts div{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:2px}
 .doc{white-space:pre-line;background:var(--panel);border:1.5px solid var(--line);border-left:5px solid var(--navy);border-radius:10px;padding:16px 18px;font-size:17px;line-height:1.6;margin:0 0 8px}
-.aud{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px}.aud audio{width:100%}
+.nq{padding-left:1.4em;display:grid;gap:10px;margin:16px 0}.nq li{display:grid;gap:4px}.nq input{max-width:12em;min-height:44px}.nres{font-size:15px}
+.aud{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px;margin-bottom:10px}.aud audio{width:100%}
 .chk{list-style:none;padding:0;margin:0 0 10px;display:grid;gap:8px}.chk label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}.chk input{width:22px;height:22px;flex:none;margin-top:2px}
 a.lnk{display:block;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);text-decoration:none}a.lnk b{color:var(--blue)}
 </style>
@@ -268,13 +269,21 @@ function writeMenu(){menu("Travailler l'écrit","TCF · Lire et Écrire",[
  ["Lire un document",`${RD.length} documents · comme au TCF`,()=>go(readList)],
  ["Écrire un message",`${WR.length} sujets · comme au TCF`,()=>go(writeList)]])}
 function oralMenu(){menu("Travailler l'oral","TCF · Écouter",[
- ["Écouter un dialogue",`${LP.length} enregistrements`,listenStart],
+ ["Écouter un dialogue",`${LP.length} dialogues et annonces`,()=>go(listenList)],
  ["Les nombres dans la vie","Prix, horaires, promotions",()=>go(numView)],
- ["Les 17 audios","À écouter sur le téléphone",()=>go(audioList)],
+ ["Les nombres : l'audio complet","16 questions · audio 13",()=>go(num13)],
  ["Pour écouter chaque jour","RFI, TV5Monde",()=>go(linksView)]])}
-const AUDIOS=["À la boulangerie","Message du cabinet médical","Annonce à la gare","À la pharmacie","La météo de demain","Au marché","Appeler le plombier","La fête des voisins","À la Poste","Réserver au restaurant","Annonce : le train pour Toulon","Appeler le cabinet médical","Les nombres dans la vie","Se présenter","Situations","Donner son avis","Les phrases utiles pour l'oral"];
-function audioList(){
- stage.innerHTML=`<div class="card"><div class="cardhead"><b>Les 17 audios</b><span>01-12 écouter · 13 nombres · 14-17 parler</span></div><div class="cardbody"><div class="res">${AUDIOS.map((t,k)=>{const n=String(k+1).padStart(2,"0");return `<div class="aud"><b>${n} · ${esc(t)}</b><audio controls preload="none" src="audio/${n}.mp3"></audio></div>`}).join("")}</div></div></div>`;
+function num13(){
+ stage.innerHTML=`<div class="card"><div class="cardhead"><b>Les nombres dans la vie</b><span>Audio 13 · 16 questions</span></div><div class="cardbody">
+ <p class="small">Read the question, listen, and write the answer in numbers. Each sentence is said two times.</p>
+ <audio controls preload="none" src="audio/13.mp3" style="width:100%"></audio>
+ <ol class="nq">${NUM.map((n,k)=>`<li><span lang="fr">${esc(n.q)}</span><input type="text" inputmode="decimal" data-n="${k}" aria-label="Réponse ${k+1}"><span class="nres" id="nr${k}"></span></li>`).join("")}</ol>
+ <div class="act"><button class="btn" id="n13check" type="button">Vérifier</button><button class="btn ghost" id="n13show" type="button">Voir les réponses et le texte</button></div></div></div>`;
+ const show=(withText,count)=>{let sc=0;NUM.forEach((n,k)=>{const v=stage.querySelector(`[data-n="${k}"]`).value.trim();const ok=v&&n.ok.map(nnorm).includes(nnorm(v));if(ok)sc++;
+  document.getElementById("nr"+k).innerHTML=(v?(ok?`<b class="okw">✓ ${esc(n.show)}</b>`:`<b class="badw">✗</b> <b class="okw">${esc(n.show)}</b>`):`<b class="okw">${esc(n.show)}</b>`)+(withText?`<br><span class="small" lang="fr">${esc(n.say)}</span>`:"")});
+  if(count){S.num.n+=NUM.length;S.num.ok+=sc;save();meters()}return sc};
+ document.getElementById("n13check").onclick=e=>{const sc=show(false,true);e.currentTarget.outerHTML=`<span class="tag">${sc} / ${NUM.length}</span>`};
+ document.getElementById("n13show").onclick=()=>show(true);
 }
 function dayView(){
  const li=a=>`<ul class="chk">${a.map(x=>`<li><label><input type="checkbox"> ${esc(x)}</label></li>`).join("")}</ul>`;
@@ -519,6 +528,12 @@ function listenStart(){
  const p=LP.slice().sort((a,b)=>((S.listen[a.id]||{n:0}).n-(S.listen[b.id]||{n:0}).n)||Math.random()-0.5)[0];
  openListening(p);
 }
+function listenList(){
+ stage.innerHTML=`<div class="card"><div class="cardhead"><b>Écouter</b><span>${Object.keys(S.listen).length} / ${LP.length}</span></div><div class="cardbody">
+ <div class="fb" style="margin-top:0">${pill("remember","Tip","Read the 3 questions BEFORE you listen.")}</div>
+ <div class="cards" style="margin-top:14px">${LP.map((p,k)=>`<button type="button" data-p="${p.id}"><b>${String(k+1).padStart(2,"0")} · ${esc(p.title)}</b><br><span class="small">${esc(p.src)} · 3 questions${S.listen[p.id]?` · ✓ ${S.listen[p.id].best}/3`:""}</span></button>`).join("")}</div></div></div>`;
+ stage.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>openListening(LP.find(x=>x.id===b.dataset.p)));
+}
 function openListening(p){LR=null;go(()=>listenView(p))}
 function boldify(text,vocab){
  let t=esc(text);const marks=[];
@@ -569,9 +584,9 @@ function listenReveal(p){
  tb.innerHTML=`<div class="transcript"><p class="small"><b>Le texte</b></p>${scriptHTML(p,true)}</div>`;
  wireGloss(tb);
  answerBonus(document.getElementById("bonusbox"),p.bonus,p.bonusRef);
- document.getElementById("lact").innerHTML=`<span class="tag">${sc} / ${p.qs.length}</span><button class="btn" id="lsheet" type="button">Fiche de révision</button><button class="btn ghost" id="lnext" type="button">Un autre</button>`;
+ document.getElementById("lact").innerHTML=`<span class="tag">${sc} / ${p.qs.length}</span><button class="btn" id="lsheet" type="button">Fiche de révision</button><button class="btn ghost" id="lnext" type="button">Dialogue suivant</button>`;
  document.getElementById("lsheet").onclick=()=>{SV={side:"recto",hide:false};go(()=>sheetView(p))};
- document.getElementById("lnext").onclick=listenStart;
+ document.getElementById("lnext").onclick=()=>{CUR=null;openListening(LP[(LP.indexOf(p)+1)%LP.length])};
 }
 function answerBonus(box,q,ref){
  box.innerHTML=`<div class="bonus"><p class="small"><b>Bonus</b> · Réponds par une phrase.</p><p class="en">${esc(q)}</p>
@@ -599,11 +614,12 @@ Réponds uniquement par un objet JSON : {"sens":"juste|partielle|fausse","erreur
 }
 
 /* ---------- SPEAKING ---------- */
+const SPAUD={pres:[["audio/14.mp3","Audio 14 · Listen to the questions and the model answers, then repeat."]],sit:[["audio/15.mp3","Audio 15 · The situations with a model."],["audio/17.mp3","Audio 17 · The useful sentences: repeat them."]],avis:[["audio/16.mp3","Audio 16 · 4 subjects with a model."]]};
 function speakList(){
  const card=s=>`<button type="button" data-s="${s.id}"><b>${esc(s.cat==="lire"?s.fr:s.en)}</b>${S.speak[s.id]?`<br><span class="small">✓</span>`:""}</button>`;
  const cats=[["pres","Se présenter (TCF, partie 1)"],["sit","Situations (TCF, partie 2)"],["avis","Donner son avis (TCF, partie 3)"],["lire","Répéter"]];
  stage.innerHTML=`<div class="card"><div class="cardhead"><b>Parler</b><span>${Object.keys(S.speak).length} / ${SP.length}</span></div><div class="cardbody">
- ${cats.map(([c,l],k)=>`<p class="q"${k?' style="margin-top:18px"':""}>${l}</p><div class="cards">${SP.filter(s=>s.cat===c).map(card).join("")}</div>`).join("")}</div></div>`;
+ ${cats.map(([c,l],k)=>`<p class="q"${k?' style="margin-top:18px"':""}>${l}</p>${SPAUD[c]?SPAUD[c].map(([f,t])=>`<div class="aud"><span class="small">${esc(t)}</span><audio controls preload="none" src="${f}"></audio></div>`).join(""):""}<div class="cards">${SP.filter(s=>s.cat===c).map(card).join("")}</div>`).join("")}</div></div>`;
  stage.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{const s=SP.find(x=>x.id===b.dataset.s);go(()=>speakView(s))});
 }
 const words=s=>norm(s).replace(/[-–—]/g," ").replace(/[^\p{L}' ]/gu," ").replace(/'/g,"' ").split(/\s+/).filter(Boolean);
